@@ -1,5 +1,6 @@
 import io
-import os
+from pathlib import Path
+
 import docker
 from docker.errors import ImageNotFound
 
@@ -8,7 +9,7 @@ from tempfolder import TempFolder
 
 
 class DockerImageBuilder:
-
+    # ! Штука для подстарховки, писал до согласования логики Image
     def __init__(self):
         self.client = docker.from_env()
 
@@ -38,73 +39,91 @@ class DockerImageBuilder:
 
 class DockerContainer:
 
-    def __init__(self, json_settings):
-        self.json_settings = json_settings
+    def __init__(self):
         self.image_builder = DockerImageBuilder()
+        self.client = docker.from_env()
 
-    def test_files(self,):
-        pass
+    def _test_files(self, temp_folder: TempFolder, task_id: int):
+        # Тут уже из бд получиам тесты и добавляем их в папку
+        _files = ...
+        for test_file in _files:
+            temp_folder.append_file(f"tests/{test_file.name}", test_file)
+
+    def _test_runner(
+        self,
+        temp_folder: TempFolder,
+        language_image: LanguageImage,
+    ):
+
+        compile_cmd = language_image.compile_cmd or ""
+        run_cmd = language_image.run_cmd
+
+        script = f"""#!/bin/bash
+
+        {compile_cmd}
+
+        for input in tests/*.in
+        do
+            output="${{input%.in}}.out"
+
+            result=$(timeout 2s {run_cmd} < "$input")
+
+            expected=$(cat "$output")
+
+            if [ "$result" = "$expected" ]; then
+                echo "$input: OK"
+            else
+                echo "$input: FAIL"
+                echo "Expected: $expected"
+                echo "Got: $result"
+            fi
+        done
+        """
+
+        temp_folder.append_file("run.sh", script.encode())
 
     def run(
         self,
         language_image: LanguageImage,
-        codes: list[tuple[str, str]],
+        temp_folder: TempFolder,
+        task_id: int,
     ):
 
-        self.image_builder.ensure_image(language_image)
+        # self.image_builder.ensure_image(language_image)
 
-        with TempFolder(closeability=True) as tmpf:
+        self._test_files(temp_folder, task_id)
 
-            # ! ПОДУМАТЬ КАК МОЖНО ТУТ ЭТО РЕАЛИЗОВАТЬ
+        self._test_runner(temp_folder, language_image)
 
-            # ! -------------------------------------------------
+        workspace = Path(temp_folder.path).resolve()
 
-            # ! Добавление файлов пользователя в контейнер
-            for filename, code in codes:
-                tmpf.append_file(filename, code)
+        container = self.client.containers.run(
+            image=language_image.full_name,
 
-            # ! Добавление файлов контейнера в контейнер
-            tests_folder = os.path.join(tmpf, "tests")
-            os.makedirs(tests_folder, exist_ok=True)
-
-            # ! ------------------------------------------------
-
-            volumes = {
-                str(tmpf.path): {
+            volumes={
+                str(workspace): {
                     "bind": "/sandbox",
                     "mode": "rw"
                 }
-            }
+            },
 
-            container = self.image_builder.client.containers.run(
+            working_dir="/sandbox",
 
-                image=language_image.full_name,
-                command="/bin/sh runner.sh",
-                working_dir="/sandbox",
-                volumes=volumes,
-                network_mode="none",
-                mem_limit="256m",
-                nano_cpus=1_000_000_000,
-                pids_limit=64,
-                read_only=True,
-                tmpfs={
-                    "/tmp": "rw,size=64m"
-                },
-                cap_drop=["ALL"],
-                security_opt=["no-new-privileges"],
-                user="1000:1000",
-                detach=True,
-                stdout=True,
-                stderr=True,
-            )
+            command="bash /sandbox/run.sh",
 
-            result = container.wait()
+            detach=True,
+            stdout=True,
+            stderr=True,
 
-            logs = container.logs(stdout=True, stderr=True)
+            network_disabled=True,
+            mem_limit="256m",
+            pids_limit=64,
+        )
 
-            container.remove()
+        result = container.wait()
 
-            return {
-                "status": result,
-                "logs": logs.decode("utf-8")
-            }
+        logs = container.logs().decode()
+
+        container.remove()
+
+        return result["StatusCode"], logs

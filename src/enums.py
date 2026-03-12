@@ -1,5 +1,4 @@
-from enum import StrEnum
-from dataclasses import dataclass
+from enum import StrEnum, Enum
 
 
 class CodeVerdict(StrEnum):
@@ -21,15 +20,37 @@ class CodeVerdict(StrEnum):
         return self is CodeVerdict.OK
 
 
-@dataclass
-class LanguageImage:
-    name: str
-    tag: str
-    dockerfile: str
+class LanguageImage(Enum):
+
+    PYTHON = {
+        "image": "judge-python",
+        "compile": None,
+        "run": "python3 main.py"
+    }
+
+    CPP = {
+        "image": "judge-cpp",
+        "compile": "g++ main.cpp -O2 -o main",
+        "run": "./main"
+    }
+
+    JAVA = {
+        "image": "judge-java",
+        "compile": "javac Main.java",
+        "run": "java Main"
+    }
 
     @property
-    def full_name(self) -> str:
-        return f"{self.name}:{self.tag}"
+    def full_name(self):
+        return self.value["image"]
+
+    @property
+    def compile_cmd(self):
+        return self.value["compile"]
+
+    @property
+    def run_cmd(self):
+        return self.value["run"]
 
 
 PYTHON_DOCKERFILE = """
