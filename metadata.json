@@ -1,0 +1,8 @@
+{
+  "name": "Code Testing System",
+  "description": "An automated code testing and evaluation system supporting multiple programming languages, multi-file submissions, sandboxed test-case execution, and detailed verdicts.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

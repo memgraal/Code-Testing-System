@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='16 18 22 12 16 6'></polyline><polyline points='8 6 2 12 8 18'></polyline></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Code Testing System</title>
+    <meta name="description" content="An automated code testing and evaluation system supporting multiple programming languages, multi-file submissions, sandboxed test-case execution, and detailed verdicts." />
+    <meta property="og:title" content="Code Testing System" />
+    <meta property="og:description" content="An automated code testing and evaluation system supporting multiple programming languages, multi-file submissions, sandboxed test-case execution, and detailed verdicts." />
+    <!-- Load Pyodide for sandboxed client-side Python 3 execution -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js" defer></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 min-h-screen antialiased selection:bg-blue-500/30 selection:text-blue-200">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
